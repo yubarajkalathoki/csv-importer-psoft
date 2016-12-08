@@ -48,25 +48,12 @@
 			<artifactId>junit</artifactId>
 			<version>4.8.1</version>
 		</dependency>
-
-		<!-- <dependency> -->
-		<!-- <groupId>log4j</groupId> -->
-		<!-- <artifactId>log4j</artifactId> -->
-		<!-- <version>1.2.17</version> -->
-		<!-- </dependency> -->
-
-
 		<!--Logback -->
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>1.0.13</version>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>net.sourceforge.jexcelapi</groupId> -->
-<!-- 			<artifactId>jxl</artifactId> -->
-<!-- 			<version>2.6</version> -->
-<!-- 		</dependency> -->
 		<dependency>
 			<groupId>commons-lang</groupId>
 			<artifactId>commons-lang</artifactId>
@@ -74,12 +61,6 @@
 			<scope>test</scope>
 			<type>jar</type>
 		</dependency>
-		<!--opencsv -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>com.opencsv</groupId> -->
-<!-- 			<artifactId>opencsv</artifactId> -->
-<!-- 			<version>3.7</version> -->
-<!-- 		</dependency> -->
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
@@ -87,8 +68,16 @@
 			<type>jar</type>
 		</dependency>
 	</dependencies>
-	<!-- <build> <plugins> <plugin> <groupId>org.apache.maven.plugins</groupId> 
-		<artifactId>maven-surefire-plugin</artifactId> <version>2.19.1</version> 
-		<configuration> <skipTests>true</skipTests> </configuration> </plugin> </plugins> 
-		</build> -->
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>

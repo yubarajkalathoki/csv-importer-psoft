@@ -1,12 +1,14 @@
 package com.yubaraj.csv.importer.psoft.processor;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.yubaraj.csv.importer.psoft.model.DealDetails;
+import com.yubaraj.csv.importer.psoft.model.LastRow;
 
 /**
  * Processes to count deal.
@@ -15,25 +17,53 @@ import com.yubaraj.csv.importer.psoft.model.DealDetails;
  */
 public class DealCountProcessor implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(DealCountProcessor.class);
-
-    private boolean started = false;
+    private boolean counted;
 
     @Override
     public void run() {
-	started = true;
-	List<String> fromCurrencyCode = JpaProcessor.getInstance().getFromCurrencyCode();
-	BigInteger lastRow = new BigInteger("0");
-	if (fromCurrencyCode.size() > 0) {
-	    lastRow = JpaProcessor.getInstance().getLastRow();
-	    LOGGER.info("Counting deals per from  currency code");
-	}
-	for (String cCode : fromCurrencyCode) {
-	    count(cCode, lastRow);
+	LOGGER.info("Counter thread started.");
+	while (true) {
+	    LOGGER.info("Counter thread excited.");
+	    LastRow lastRow = null;
+	    if (!counted) {
+		lastRow = JpaProcessor.getInstance().getLastRow();
+		List<String> fromCurrencyCode = new ArrayList<String>();
+		if (lastRow != null) {
+		    Long firstId = lastRow.getFirstId() != null ? lastRow.getFirstId() : 0;
+		    Long lastId = lastRow.getLastId();
+		    fromCurrencyCode = JpaProcessor.getInstance().getFromCurrencyCode(firstId, lastId);
+		    lastRow.setFirstId(lastId);
+		    JpaProcessor.getInstance().updateLastRow(lastRow);
+		    lastRow = null;
+		    LOGGER.debug("currencycode: " + fromCurrencyCode);
+		    if (fromCurrencyCode.size() > 0) {
+			LOGGER.info("Counting deals for from  currency code");
+			for (String cCode : fromCurrencyCode) {
+			    count(cCode, firstId, lastId);
+			}
+			counted = true;
+			fromCurrencyCode.clear();
+		    } else {
+			counted = false;
+			LOGGER.info("Waiting for new deal to count.");
+			try {
+			    Thread.sleep(10000L);
+			} catch (InterruptedException e) {
+			}
+			LOGGER.info("Counter thread excited.");
+		    }
+		}
+	    } else
+		counted = false;
+	    try {
+		Thread.sleep(1000L);
+	    } catch (InterruptedException e) {
+	    }
 	}
     }
 
-    private void count(String cCode, BigInteger lastRow) {
-	BigInteger count = JpaProcessor.getInstance().countByFromCurrencyCode(cCode, lastRow);
+    private void count(String cCode, Long firstId, Long lastId) {
+	BigInteger count = JpaProcessor.getInstance().countByFromCurrencyCode(cCode, firstId, lastId);
 	if (count.compareTo(BigInteger.ZERO) > 0) {
 	    DealDetails dealDetails = JpaProcessor.getInstance().getDealDetailsFromCurrencyCode(cCode);
 	    if (dealDetails != null) {
@@ -49,7 +79,7 @@ public class DealCountProcessor implements Runnable {
 	}
     }
 
-    public boolean isStarted() {
-	return started;
+    public boolean isCounted() {
+	return counted;
     }
 }

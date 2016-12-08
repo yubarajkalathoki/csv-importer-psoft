@@ -121,5 +121,4 @@ public class ValidDeal implements Serializable {
     public void setSourceFile(String sourceFile) {
 	this.sourceFile = sourceFile;
     }
-
 }

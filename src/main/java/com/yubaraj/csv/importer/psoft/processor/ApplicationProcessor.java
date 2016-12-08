@@ -22,7 +22,6 @@ import com.yubaraj.csv.importer.psoft.util.Initializer;
 public class ApplicationProcessor implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationProcessor.class);
 
-    ImportProcessor importProcessor;
     DealCountProcessor dealCountProcessor;
 
     @Override
@@ -52,17 +51,28 @@ public class ApplicationProcessor implements Runnable {
 	}
     }
 
-    public void process(String fileName) {
+    public synchronized void process(String fileName) {
 	LOGGER.info("Importing file: " + fileName);
-	String source = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + "\\" + fileName;
+	String source = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + "\\\\" + fileName;
 	List<ValidDeal> dealsList = CsvReader.readCsv(source);
-	String firstRowUniqueId = dealsList.get(0).getDealUniqueId();
-	if (JpaProcessor.getInstance().saveDeals(dealsList)) {
+	String firstRowUniqueId = dealsList.get(dealsList.size() - 1).getDealUniqueId();
+	boolean imported = JpaProcessor.getInstance().importFileDirectly(source);
+	if (imported) {
+	    dealsList.clear();
+	    archiveFiles(source, fileName);
 	    JpaProcessor.getInstance().updateLastRow(firstRowUniqueId);
 	    LOGGER.info("Imported file: " + fileName);
 	    startCounter();
-	    archiveFiles(source, fileName);
 	}
+    }
+
+    static <T> List<List<T>> chopped(List<T> list, final int L) {
+	List<List<T>> parts = new ArrayList<List<T>>();
+	final int N = list.size();
+	for (int i = 0; i < N; i += L) {
+	    parts.add(new ArrayList<T>(list.subList(i, Math.min(N, i + L))));
+	}
+	return parts;
     }
 
     private void archiveFiles(String source, String fileName) {
@@ -77,16 +87,10 @@ public class ApplicationProcessor implements Runnable {
     }
 
     private void startCounter() {
-	dealCountProcessor = new DealCountProcessor();
-	new Thread(dealCountProcessor).start();
-    }
-
-    static <T> List<List<T>> chopped(List<T> list, final int L) {
-	List<List<T>> parts = new ArrayList<List<T>>();
-	final int N = list.size();
-	for (int i = 0; i < N; i += L) {
-	    parts.add(new ArrayList<T>(list.subList(i, Math.min(N, i + L))));
+	if (dealCountProcessor == null) {
+	    dealCountProcessor = new DealCountProcessor();
+	    Thread thread = new Thread(dealCountProcessor);
+	    thread.start();
 	}
-	return parts;
     }
 }

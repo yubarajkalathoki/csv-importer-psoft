@@ -11,11 +11,9 @@ import com.yubaraj.csv.importer.psoft.processor.ApplicationProcessor;
 import com.yubaraj.csv.importer.psoft.util.Initializer;
 
 /**
- * Test class to import csv file.
- * 
  * @author Yuba Raj Kalathoki
  */
-public class ImporterTest {
+public class FileLoadTest {
     Initializer initializer;
     EntityManager em;
     EntityManagerFactory emf;
@@ -33,13 +31,12 @@ public class ImporterTest {
     public void close() {
 	em.getTransaction().commit();
     }
-
+    
     @Test
-    public void importFile() {
-	String fileName = "WEZ1NXOQWW.csv";
+    public void loadFile() {
+	String fileName = "YRSW1MYDFQ.csv";
 
 	ApplicationProcessor processor = new ApplicationProcessor();
 	processor.process(fileName);
-
     }
 }

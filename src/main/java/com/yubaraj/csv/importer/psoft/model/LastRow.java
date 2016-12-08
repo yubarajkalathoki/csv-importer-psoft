@@ -18,8 +18,11 @@ public class LastRow implements Serializable {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "rowId")
-    private Long rowId;
+    @Column(name = "firstId")
+    private Long firstId;
+
+    @Column(name = "lastId")
+    private Long lastId;
 
     /**
      * 
@@ -52,18 +55,32 @@ public class LastRow implements Serializable {
     }
 
     /**
-     * @return the rowId
+     * @return the firstId
      */
-    public Long getRowId() {
-	return rowId;
+    public Long getFirstId() {
+	return firstId;
     }
 
     /**
-     * @param rowId
-     *            the rowId to set
+     * @param firstId
+     *            the firstId to set
      */
-    public void setRowId(Long rowId) {
-	this.rowId = rowId;
+    public void setFirstId(Long firstId) {
+	this.firstId = firstId;
     }
 
+    /**
+     * @return the lastId
+     */
+    public Long getLastId() {
+	return lastId;
+    }
+
+    /**
+     * @param lastId
+     *            the lastId to set
+     */
+    public void setLastId(Long lastId) {
+	this.lastId = lastId;
+    }
 }

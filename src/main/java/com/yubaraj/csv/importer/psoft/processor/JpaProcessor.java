@@ -8,6 +8,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -70,17 +71,58 @@ public class JpaProcessor {
 	}
     }
 
+    public boolean saveDealsNativeQuery(List<ValidDeal> dealsList) {
+	if (emf == null) {
+	    emf = Initializer.getConnection();
+	}
+	EntityManager em = emf.createEntityManager();
+	try {
+	    em.getTransaction().begin();
+	    for (int i = 0; i < dealsList.size(); i++) {
+		ValidDeal deals = dealsList.get(i);
+		em.createNativeQuery(
+			"insert into validdeal (dealUniqueId, fromCurrencyIsoCode, toCurrencyIsoCode,dealTimestamp, dealAmount, sourceFile) "
+				+ "values ('" + deals.getDealUniqueId() + "','" + deals.getFromCurrencyIsoCode() + "','"
+				+ deals.getToCurrencyIsoCode() + "','" + deals.getDealTimestamp() + "','"
+				+ deals.getDealAmount() + "','" + deals.getSourceFile() + "')")
+			.executeUpdate();
+		if ((i % 20) == 0) {
+		    em.flush();
+		    em.clear();
+		}
+	    }
+	    em.getTransaction().commit();
+	    return true;
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    LOGGER.error("Exception: " + e.getMessage());
+	    return false;
+	} finally {
+	    em.close();
+	}
+    }
+
+    static <T> List<List<T>> chopped(List<T> list, final int L) {
+	List<List<T>> parts = new ArrayList<List<T>>();
+	final int N = list.size();
+	for (int i = 0; i < N; i += L) {
+	    parts.add(new ArrayList<T>(list.subList(i, Math.min(N, i + L))));
+	}
+	return parts;
+    }
+
     public boolean importFileDirectly(String file) {
 	EntityManager em = emf.createEntityManager();
 	EntityTransaction entityTransaction = em.getTransaction();
 	System.out.println("file: " + file);
 	try {
 	    String sql = "LOAD DATA INFILE '" + file + "' " + "INTO TABLE validdeal " + "FIELDS TERMINATED BY ',' "
-		    + "ENCLOSED BY '\"' " + "LINES TERMINATED BY '\\n' set sourceFile='" + file + "'";
+		    + "ENCLOSED BY '\"' " + "LINES TERMINATED BY '\\n'"
+		    + " (dealUniqueId,fromCurrencyIsoCode,toCurrencyIsoCode,dealTimestamp,dealAmount)  "
+		    + " set sourceFile='" + file + "', id=NULL";
 	    System.out.println("sql: " + sql);
 	    entityTransaction.begin();
 	    em.createNativeQuery(sql).executeUpdate();
-	    System.out.println("===============Finished!=============");
 	    entityTransaction.commit();
 	    return true;
 	} catch (Exception e) {
@@ -89,14 +131,15 @@ public class JpaProcessor {
 	}
     }
 
-    public BigInteger countByFromCurrencyCode(String cCode, BigInteger lastId) {
+    public BigInteger countByFromCurrencyCode(String cCode, Long firstId, Long lastId) {
 	if (emf == null) {
 	    emf = Initializer.getConnection();
 	}
 	EntityManager eManager = null;
 	try {
 	    eManager = emf.createEntityManager();
-	    String sql = "SELECT COUNT(0) FROM validdeal WHERE fromCurrencyIsoCode='" + cCode + "' and id >=" + lastId;
+	    String sql = "SELECT COUNT(0) FROM validdeal WHERE fromCurrencyIsoCode='" + cCode + "' and id > " + firstId
+		    + " and id <= " + lastId;
 	    Query query = eManager.createNativeQuery(sql);
 	    BigInteger count = (BigInteger) query.getSingleResult();
 	    return count;
@@ -120,7 +163,6 @@ public class JpaProcessor {
 	    TypedQuery<DealDetails> query = eManager
 		    .createQuery("SELECT d FROM DealDetails d WHERE d.currencyIsoCode = :cCode", DealDetails.class);
 	    return query.setParameter("cCode", cCode).getSingleResult();
-	    // return (DealDetails) query.getSingleResult();
 	} catch (NoResultException e) {
 	} catch (Exception e) {
 	    e.printStackTrace();
@@ -156,16 +198,18 @@ public class JpaProcessor {
     }
 
     @SuppressWarnings("unchecked")
-    public List<String> getFromCurrencyCode() {
+    public List<String> getFromCurrencyCode(Long firstId, Long lastId) {
 	if (emf == null) {
 	    emf = Initializer.getConnection();
 	}
 	List<String> currencyCodes = new ArrayList<String>();
 	EntityManager eManager = null;
 	try {
+	    String sqlString = "SELECT fromCurrencyIsoCode FROM validdeal where id > " + firstId + " and id <= "
+		    + lastId + " GROUP BY fromCurrencyIsoCode";
+	    LOGGER.debug("Currency code query: " + sqlString);
 	    eManager = emf.createEntityManager();
-	    Query query = eManager
-		    .createNativeQuery("SELECT fromCurrencyIsoCode FROM validdeal GROUP BY fromCurrencyIsoCode");
+	    Query query = eManager.createNativeQuery(sqlString);
 	    currencyCodes = query.getResultList();
 	} catch (Exception e) {
 	    e.printStackTrace();
@@ -176,15 +220,15 @@ public class JpaProcessor {
 	return currencyCodes;
     }
 
-    public BigInteger getLastRow() {
+    public LastRow getLastRow() {
 	if (emf == null) {
 	    emf = Initializer.getConnection();
 	}
 	EntityManager eManager = null;
 	try {
 	    eManager = emf.createEntityManager();
-	    Query query = eManager.createNativeQuery("SELECT rowId FROM lastrow");
-	    return (BigInteger) query.getSingleResult();
+	    TypedQuery<LastRow> query = eManager.createQuery("SELECT lr FROM LastRow lr", LastRow.class);
+	    return query.getSingleResult();
 	} catch (NoResultException e) {
 	} catch (Exception e) {
 	    e.printStackTrace();
@@ -192,10 +236,10 @@ public class JpaProcessor {
 	} finally {
 	    eManager.close();
 	}
-	return new BigInteger("0");
+	return null;
     }
 
-    public void updateLastRow(String lastRowUniqueId) {
+    public synchronized LastRow updateLastRow(String lastRowUniqueId) {
 	LOGGER.debug("Updating last row.");
 	if (emf == null) {
 	    emf = Initializer.getConnection();
@@ -207,15 +251,45 @@ public class JpaProcessor {
 	    Query query = eManager
 		    .createNativeQuery("select id from validdeal where dealUniqueId='" + lastRowUniqueId + "'");
 	    BigInteger lastRowId = (BigInteger) query.getSingleResult();
-	    LastRow lRow = new LastRow(1l);
-	    lRow.setRowId(lastRowId.longValue());
-	    eManager.merge(lRow);
+	    LastRow lastRow = getLastRow();
+	    if (lastRow != null) {
+		lastRow.setLastId(lastRowId.longValue());
+		eManager.merge(lastRow);
+	    } else {
+		lastRow = new LastRow();
+		lastRow.setLastId(lastRowId.longValue());
+		eManager.persist(lastRow);
+	    }
 	    eManager.getTransaction().commit();
+	    return lastRow;
+	} catch (NonUniqueResultException nure) {
 	} catch (Exception e) {
 	    e.printStackTrace();
 	    LOGGER.error("Exception: " + e.getMessage());
 	} finally {
 	    eManager.close();
 	}
+	return null;
+    }
+
+    public synchronized LastRow updateLastRow(LastRow lastRow) {
+	LOGGER.debug("Updating last row.");
+	if (emf == null) {
+	    emf = Initializer.getConnection();
+	}
+	EntityManager eManager = null;
+	try {
+	    eManager = emf.createEntityManager();
+	    eManager.getTransaction().begin();
+	    eManager.merge(lastRow);
+	    eManager.getTransaction().commit();
+	    return lastRow;
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    LOGGER.error("Exception: " + e.getMessage());
+	} finally {
+	    eManager.close();
+	}
+	return null;
     }
 }
