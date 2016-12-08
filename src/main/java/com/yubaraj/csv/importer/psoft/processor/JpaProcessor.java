@@ -114,13 +114,11 @@ public class JpaProcessor {
     public boolean importFileDirectly(String file) {
 	EntityManager em = emf.createEntityManager();
 	EntityTransaction entityTransaction = em.getTransaction();
-	System.out.println("file: " + file);
 	try {
 	    String sql = "LOAD DATA INFILE '" + file + "' " + "INTO TABLE validdeal " + "FIELDS TERMINATED BY ',' "
 		    + "ENCLOSED BY '\"' " + "LINES TERMINATED BY '\\n'"
 		    + " (dealUniqueId,fromCurrencyIsoCode,toCurrencyIsoCode,dealTimestamp,dealAmount)  "
 		    + " set sourceFile='" + file + "', id=NULL";
-	    System.out.println("sql: " + sql);
 	    entityTransaction.begin();
 	    em.createNativeQuery(sql).executeUpdate();
 	    entityTransaction.commit();
@@ -207,7 +205,6 @@ public class JpaProcessor {
 	try {
 	    String sqlString = "SELECT fromCurrencyIsoCode FROM validdeal where id > " + firstId + " and id <= "
 		    + lastId + " GROUP BY fromCurrencyIsoCode";
-	    LOGGER.debug("Currency code query: " + sqlString);
 	    eManager = emf.createEntityManager();
 	    Query query = eManager.createNativeQuery(sqlString);
 	    currencyCodes = query.getResultList();

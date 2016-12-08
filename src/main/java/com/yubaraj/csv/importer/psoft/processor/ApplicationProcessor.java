@@ -1,8 +1,6 @@
 package com.yubaraj.csv.importer.psoft.processor;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -23,6 +21,7 @@ public class ApplicationProcessor implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationProcessor.class);
 
     DealCountProcessor dealCountProcessor;
+    private static final String SEPARATOR = "/";
 
     @Override
     public void run() {
@@ -53,7 +52,8 @@ public class ApplicationProcessor implements Runnable {
 
     public synchronized void process(String fileName) {
 	LOGGER.info("Importing file: " + fileName);
-	String source = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + "\\\\" + fileName;
+	String source = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + SEPARATOR + fileName;
+	LOGGER.debug("Source: " + source);
 	List<ValidDeal> dealsList = CsvReader.readCsv(source);
 	String firstRowUniqueId = dealsList.get(dealsList.size() - 1).getDealUniqueId();
 	boolean imported = JpaProcessor.getInstance().importFileDirectly(source);
@@ -66,19 +66,10 @@ public class ApplicationProcessor implements Runnable {
 	}
     }
 
-    static <T> List<List<T>> chopped(List<T> list, final int L) {
-	List<List<T>> parts = new ArrayList<List<T>>();
-	final int N = list.size();
-	for (int i = 0; i < N; i += L) {
-	    parts.add(new ArrayList<T>(list.subList(i, Math.min(N, i + L))));
-	}
-	return parts;
-    }
-
     private void archiveFiles(String source, String fileName) {
-	String newDirectory = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + File.separator + "Archived";
+	String newDirectory = Initializer.configMap.get(ConfigConst.CSV_FILE_LOCATION) + SEPARATOR + "Archived";
 	FileUtil.createDirectoryIfNotExist(newDirectory);
-	String target = newDirectory + File.separator + fileName;
+	String target = newDirectory + SEPARATOR + fileName;
 	try {
 	    FileUtil.moveFile(source, target);
 	} catch (IOException e) {

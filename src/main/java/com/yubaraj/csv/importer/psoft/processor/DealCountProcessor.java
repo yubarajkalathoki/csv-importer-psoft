@@ -23,7 +23,6 @@ public class DealCountProcessor implements Runnable {
     public void run() {
 	LOGGER.info("Counter thread started.");
 	while (true) {
-	    LOGGER.info("Counter thread excited.");
 	    LastRow lastRow = null;
 	    if (!counted) {
 		lastRow = JpaProcessor.getInstance().getLastRow();
@@ -50,7 +49,6 @@ public class DealCountProcessor implements Runnable {
 			    Thread.sleep(10000L);
 			} catch (InterruptedException e) {
 			}
-			LOGGER.info("Counter thread excited.");
 		    }
 		}
 	    } else
@@ -59,6 +57,7 @@ public class DealCountProcessor implements Runnable {
 		Thread.sleep(1000L);
 	    } catch (InterruptedException e) {
 	    }
+	    LOGGER.info("Counter thread excited.");
 	}
     }
 
