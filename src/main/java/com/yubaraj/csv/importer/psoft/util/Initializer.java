@@ -36,7 +36,8 @@ public class Initializer {
 
     public boolean init() {
 	configMap.put(ConfigConst.CSV_FILE_LOCATION, dbConnectionProperties.getProperty("csv.file.location").trim());
-
+	configMap.put(ConfigConst.CSV_FILE_NAME, dbConnectionProperties.getProperty("csv.file.name").trim());
+	
 	String serverAddress = dbConnectionProperties.getProperty("serverAddress").trim();
 	String portNumber = dbConnectionProperties.getProperty("portNumber").trim();
 	String databaseName = dbConnectionProperties.getProperty("databaseName").trim();
@@ -46,7 +47,7 @@ public class Initializer {
 	/**
 	 * set the properties hashmap to create entitymanagerfactory
 	 */
-	Map properties = new HashMap();
+	Map<String,String> properties = new HashMap<String,String>();
 	properties.put("hibernate.connection.driver_class", "com.mysql.jdbc.Driver");
 	properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL5InnoDBDialect");
 	properties.put("hibernate.connection.url",
@@ -62,6 +63,7 @@ public class Initializer {
 	} catch (Exception e) {
 	    emf = null;
 	    e.printStackTrace();
+	    LOGGER.error(e.getMessage());
 	}
 	return true;
     }
@@ -77,9 +79,4 @@ public class Initializer {
     public static EntityManagerFactory getConnection() {
 	return emf;
     }
-
-    public static void main(String[] args) {
-	System.out.println("emf: " + Initializer.getConnection());
-    }
-
 }
