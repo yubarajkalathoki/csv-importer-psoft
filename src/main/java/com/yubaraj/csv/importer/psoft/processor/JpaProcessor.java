@@ -1,5 +1,6 @@
 package com.yubaraj.csv.importer.psoft.processor;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -288,5 +289,51 @@ public class JpaProcessor {
 	    eManager.close();
 	}
 	return null;
+    }
+
+    public long countTotalDeals() {
+	if (emf == null) {
+	    emf = Initializer.getConnection();
+	}
+	EntityManager eManager = null;
+	try {
+	    eManager = emf.createEntityManager();
+	    String sql = "SELECT COUNT(0) FROM validdeal ";
+	    Query query = eManager.createNativeQuery(sql);
+	    BigInteger count = (BigInteger) query.getSingleResult();
+	    return count.longValue();
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    LOGGER.error("Exception: " + e.getMessage());
+	    return 0;
+	} finally {
+	    eManager.close();
+	}
+
+    }
+
+    /**
+     * Returns sum of deal count from dealdetails.
+     * 
+     * @author Yuba Raj Kalathoki
+     */
+    public long getSumOfDealsPerOrderingCurrency() {
+	if (emf == null) {
+	    emf = Initializer.getConnection();
+	}
+	EntityManager eManager = null;
+	try {
+	    eManager = emf.createEntityManager();
+	    String sql = "SELECT SUM(countOfDeals) FROM dealdetails";
+	    Query query = eManager.createNativeQuery(sql);
+	    BigDecimal sum = (BigDecimal) query.getSingleResult();
+	    return sum.longValue();
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    LOGGER.error("Exception: " + e.getMessage());
+	    return 0;
+	} finally {
+	    eManager.close();
+	}
     }
 }
